@@ -25,3 +25,10 @@ idf.py -p COMx flash monitor
 ## 网站
 
 GitHub Pages 地址：<https://dongfeng19830925-stack.github.io/>
+## BLE 网页连接 Demo
+
+- 网页控制台：https://dongfeng19830925-stack.github.io/ble/
+- 固件工程（私有）：https://github.com/dongfeng19830925-stack/esp32-ble-web
+- ESP32-S3 作为 NimBLE GATT 外设，网页通过 Web Bluetooth 连接附近设备并读写控制特征值。
+- ON/OFF 是逻辑状态演示；当前不会驱动 GPIO。设备需要先烧录固件。
+- 浏览器需支持 Web Bluetooth；页面用 HTTPS，设备发现由用户点击触发。浏览器必须能直连附近蓝牙设备，不能远程跨网访问蓝牙。
