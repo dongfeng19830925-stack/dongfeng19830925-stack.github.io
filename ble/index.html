@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1020">
+  <title>ESP32 BLE 网页控制</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0b1020;--panel:#141d32;--line:#293956;--text:#edf3ff;--muted:#a8b6d1;--blue:#76aaff;--mint:#62e6c4;--red:#ff9292}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 20% 0%,#19385a 0,transparent 43%),var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+    main{width:min(760px,calc(100% - 32px));margin:0 auto;padding:56px 0 48px}.eyebrow{color:var(--mint);font-size:.78rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase}
+    h1{font-size:clamp(2rem,7vw,3.7rem);line-height:1.1;letter-spacing:-.04em;margin:.5rem 0 1rem}.intro{color:var(--muted);max-width:650px}
+    .panel{background:linear-gradient(145deg,#17233b,#111a2b);border:1px solid var(--line);border-radius:18px;padding:24px;margin-top:24px;box-shadow:0 18px 60px #0003}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.status{color:var(--muted);font-size:.95rem}.status[data-kind="ok"]{color:var(--mint)}.status[data-kind="error"]{color:var(--red)}
+    button{border:1px solid #4974b4;border-radius:10px;background:#244a7a;color:#fff;font:inherit;font-weight:650;padding:10px 16px;cursor:pointer;transition:background .15s,transform .15s}
+    button:hover{background:#2e5c94}button:active{transform:translateY(1px)}button:disabled{opacity:.48;cursor:not-allowed}
+    .commands{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.commands button{background:#192640;border-color:var(--line)}.commands button:hover{border-color:var(--blue)}
+    .custom{display:flex;gap:10px;margin-top:16px}.custom input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;background:#0b1324;color:var(--text);font:inherit;padding:10px 12px}
+    .value{border:1px dashed #3c5273;border-radius:12px;padding:14px;margin-top:17px;color:var(--mint);font:600 1.1rem ui-monospace,Consolas,monospace;min-height:54px;overflow-wrap:anywhere}
+    .hint{color:var(--muted);font-size:.88rem;margin:18px 0 0}.back{display:inline-block;margin-top:28px;color:var(--blue);text-decoration:none}.back:hover{text-decoration:underline}
+    @media(max-width:520px){main{padding-top:36px}.panel{padding:18px}.custom{flex-direction:column}.custom button{width:100%}}
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">ESP · Web Bluetooth</div>
+    <h1>ESP32 BLE 控制台</h1>
+    <p class="intro">网页通过蓝牙低功耗连接附近的 ESP32-S3。设备需要先烧录私有工程中的固件，并保持通电和广播。</p>
+    <section class="panel" aria-label="BLE 连接控制">
+      <div class="row">
+        <div id="status" class="status" role="status" aria-live="polite">尚未连接</div>
+        <button id="connect">连接 ESP32</button>
+      </div>
+      <div class="commands">
+        <button data-command="PING" disabled>Ping</button>
+        <button data-command="ON" disabled>ON</button>
+        <button data-command="OFF" disabled>OFF</button>
+        <button id="read" disabled>读取状态</button>
+        <button id="disconnect" disabled>断开</button>
+      </div>
+      <div class="custom">
+        <input id="custom" maxlength="24" autocomplete="off" placeholder="发送自定义文本（最多 24 字节）">
+        <button id="send" disabled>发送</button>
+      </div>
+      <div id="value" class="value">等待设备连接</div>
+      <p class="hint">ON/OFF 是固件中的逻辑状态演示，不会驱动 GPIO。首次连接请在系统弹出的设备选择框中选择 ESP32S3-BLE。</p>
+    </section>
+    <p class="hint">需要 HTTPS、支持 Web Bluetooth 的 Chrome 或 Edge，以及可用的本机蓝牙。浏览器会要求你点击“连接 ESP32”并明确选择设备；网页不能跨网络远程访问蓝牙。</p>
+    <a class="back" href="/">← 返回 ESP 小实验室</a>
+  </main>
+  <script>
+    "use strict";
+    const SERVICE_UUID = "5f6d4f01-8c6e-4e62-a9b0-6a2f5a000001";
+    const CHARACTERISTIC_UUID = "5f6d4f02-8c6e-4e62-a9b0-6a2f5a000001";
+    const connectButton = document.getElementById("connect");
+    const disconnectButton = document.getElementById("disconnect");
+    const readButton = document.getElementById("read");
+    const sendButton = document.getElementById("send");
+    const customInput = document.getElementById("custom");
+    const statusEl = document.getElementById("status");
+    const valueEl = document.getElementById("value");
+    let device = null;
+    let characteristic = null;
+
+    function setStatus(message, kind) {
+      statusEl.textContent = message;
+      statusEl.dataset.kind = kind || "";
+    }
+
+    function updateButtons(connected) {
+      document.querySelectorAll("[data-command]").forEach((button) => {
+        button.disabled = !connected;
+      });
+      readButton.disabled = !connected;
+      sendButton.disabled = !connected;
+      disconnectButton.disabled = !connected;
+      connectButton.disabled = connected;
+    }
+
+    function showValue(dataView) {
+      const bytes = new Uint8Array(dataView.buffer, dataView.byteOffset, dataView.byteLength);
+      const text = new TextDecoder().decode(bytes);
+      valueEl.textContent = text || "(空值)";
+    }
+
+    async function readValue() {
+      if (!characteristic) return;
+      showValue(await characteristic.readValue());
+    }
+
+    async function writeCommand(command) {
+      if (!characteristic) return;
+      const bytes = new TextEncoder().encode(command);
+      if (bytes.length === 0 || bytes.length > 24) {
+        setStatus("命令长度需要在 1 到 24 字节之间", "error");
+        return;
+      }
+      try {
+        await characteristic.writeValueWithResponse(bytes);
+        await readValue();
+        setStatus("已发送：" + command, "ok");
+      } catch (error) {
+        setStatus("发送失败：" + error.message, "error");
+      }
+    }
+
+    connectButton.addEventListener("click", async () => {
+      if (!("bluetooth" in navigator)) {
+        setStatus("当前浏览器没有 Web Bluetooth，请用支持该功能的 Chrome 或 Edge", "error");
+        return;
+      }
+      connectButton.disabled = true;
+      setStatus("等待选择附近的 ESP32…");
+      try {
+        device = await navigator.bluetooth.requestDevice({
+          filters: [{ namePrefix: "ESP32S3-BLE" }],
+          optionalServices: [SERVICE_UUID]
+        });
+        device.addEventListener("gattserverdisconnected", () => {
+          characteristic = null;
+          updateButtons(false);
+          setStatus("设备已断开");
+        });
+        const server = await device.gatt.connect();
+        const service = await server.getPrimaryService(SERVICE_UUID);
+        characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+        await readValue();
+        updateButtons(true);
+        setStatus("已连接 " + device.name, "ok");
+      } catch (error) {
+        characteristic = null;
+        device = null;
+        updateButtons(false);
+        setStatus(error.name === "NotFoundError" ? "未选择设备" : "连接失败：" + error.message, "error");
+      }
+    });
+
+    document.querySelectorAll("[data-command]").forEach((button) => {
+      button.addEventListener("click", () => writeCommand(button.dataset.command));
+    });
+    readButton.addEventListener("click", async () => {
+      try {
+        await readValue();
+        setStatus("状态已读取", "ok");
+      } catch (error) {
+        setStatus("读取失败：" + error.message, "error");
+      }
+    });
+    sendButton.addEventListener("click", () => writeCommand(customInput.value));
+    customInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") writeCommand(customInput.value);
+    });
+    disconnectButton.addEventListener("click", () => {
+      if (device && device.gatt.connected) device.gatt.disconnect();
+    });
+
+    updateButtons(false);
+    if (!window.isSecureContext) setStatus("此页面需要在 HTTPS 安全连接中打开", "error");
+  </script>
+</body>
+</html>
