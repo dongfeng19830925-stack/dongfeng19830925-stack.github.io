@@ -32,3 +32,7 @@ GitHub Pages 地址：<https://dongfeng19830925-stack.github.io/>
 - ESP32-S3 作为 NimBLE GATT 外设，网页通过 Web Bluetooth 连接附近设备并读写控制特征值。
 - ON/OFF 是逻辑状态演示；当前不会驱动 GPIO。设备需要先烧录固件。
 - 浏览器需支持 Web Bluetooth；页面用 HTTPS，设备发现由用户点击触发。浏览器必须能直连附近蓝牙设备，不能远程跨网访问蓝牙。
+## Waveshare ESP32-S3 Touch AMOLED 1.64 V1.1
+
+- 固件运行时，屏幕会显示 BLE 广播/连接状态及最近命令。
+- [V1.1 硬件与固件说明（知识库）](https://github.com/dongfeng19830925-stack/esp32-knowledge-base/blob/main/ESP32/Waveshare-ESP32-S3-Touch-AMOLED-1.64-V1.1-BLE.md)
