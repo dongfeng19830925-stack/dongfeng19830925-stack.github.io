@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1020">
+  <title>ESP 小实验室</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0b1020;--panel:#121a2d;--line:#263452;--text:#edf3ff;--muted:#a7b5d0;--blue:#6ea8fe;--mint:#62e6c4}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% 0%,#162e50 0,transparent 42%),var(--bg);color:var(--text);font:16px/1.65 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+    main{width:min(1040px,calc(100% - 36px));margin:0 auto;padding:72px 0 64px}.eyebrow{color:var(--mint);font-size:.82rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+    h1{font-size:clamp(2.5rem,8vw,5rem);line-height:1.05;letter-spacing:-.05em;margin:.4rem 0 1rem}.lead{color:var(--muted);font-size:1.15rem;max-width:680px}.chips{display:flex;flex-wrap:wrap;gap:10px;margin:26px 0 52px}.chip{border:1px solid var(--line);border-radius:999px;padding:6px 13px;color:#cbd8f1;background:#ffffff08;font-size:.9rem}
+    h2{font-size:1.4rem;margin:0 0 18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:16px}.card{background:linear-gradient(145deg,#151f35,#101729);border:1px solid var(--line);border-radius:18px;padding:23px;min-height:200px}.number{font-size:.78rem;color:var(--blue);font-weight:700;letter-spacing:.1em}.card h3{font-size:1.2rem;margin:14px 0 6px}.card p{color:var(--muted);margin:0}.status{display:inline-block;color:var(--mint);font-size:.78rem;margin-top:20px}.note{margin-top:38px;padding:16px 18px;border-left:3px solid var(--blue);background:#ffffff08;color:var(--muted);border-radius:0 10px 10px 0}.foot{margin-top:58px;color:#8291ad;font-size:.9rem}.foot a{color:var(--blue);text-decoration:none}.foot a:hover{text-decoration:underline}
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">ESP · ESP-IDF · Experiments</div>
+    <h1>ESP 小实验室</h1>
+    <p class="lead">把想法接到开发板上。这里记录 ESP32 小 Demo、接线方式和从构建到运行的过程。</p>
+    <div class="chips"><span class="chip">开发板：ESP32-S3</span><span class="chip">框架：ESP-IDF</span><span class="chip">示例：持续添加</span></div>
+    <h2>实验目录</h2>
+    <section class="grid" aria-label="ESP 示例">
+      <article class="card"><div class="number">01 · GPIO</div><h3>LED 与按键</h3><p>从 GPIO 输出和输入开始，做一个可见的板上实验。</p><span class="status">准备中</span></article>
+      <article class="card"><div class="number">02 · WI-FI</div><h3>扫描附近网络</h3><p>启动 Wi-Fi Station，扫描并展示附近无线网络。</p><span class="status">准备中</span></article>
+      <article class="card"><div class="number">03 · HTTP</div><h3>设备网页控制</h3><p>让开发板提供一个轻量网页，查看状态并触发简单操作。</p><span class="status">准备中</span></article>
+    </section>
+    <aside class="note">每个示例会逐步补上源码、接线图、构建命令和运行说明。现在先把实验入口搭起来。</aside>
+    <footer class="foot">源码与更新记录：<a href="https://github.com/dongfeng19830925-stack/dongfeng19830925-stack.github.io">GitHub 仓库</a></footer>
+  </main>
+</body>
+</html>
